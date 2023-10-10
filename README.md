@@ -4,7 +4,7 @@ This project introduces all scripts for reading VASP calculations from vasprun.x
 
 The core technology behind this framework is based on a graph-like representation of data:
 
-[https://doi.org/10.1038/s43588-022-00349-3](https://doi.org/10.1038/s43588-022-00349-3)
+[1038/s43588-022-00349-3](https://doi.org/10.1038/s43588-022-00349-3)
 [https://doi.org/10.1063/1.5086167](https://doi.org/10.1063/1.5086167)
 
 This technology is suitable for different applications: from analyzing defects in solid-solutions to estudying grain boundaries or interfaces in solar devices.
