@@ -37,7 +37,6 @@ An user-friendly jupyter notebook has been developed, which can be run locally w
 This project is being developed by:
 
  - Cibrán López Álvarez
- - ...
 
 ## Contact, questions and contributing
 
