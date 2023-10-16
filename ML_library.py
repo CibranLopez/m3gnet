@@ -65,13 +65,19 @@ def split_data(data, test_size=0.2, validation_size=0.2, random_state=None):
 
 
 def extract_vaspruns_dataset(path_to_dataset):
-    """Generates a Pandas DataFrame with the data from each simulation in the path. It assumes the following disposition:
+    """Generates a Pandas DataFrame with the data from each simulation in the path. It gathers different relaxation steps under the same charge state, and different deformations of the charge state under the same defect state (just as different ionic steps). It assumes the following disposition:
     
     Theory level
         Material
             Relaxation step
                 Defect state
-                    vasprun.xml
+                    vasprun.xml (with several ionic steps)
+    
+    And the dataframe will be disposed as:
+    
+    Material
+        Relaxation step
+            Ionic step
     
     Args:
         path_to_dataset (str): Path to tree database containing different level of theory calculations.
@@ -120,45 +126,63 @@ def extract_vaspruns_dataset(path_to_dataset):
             # Run over all relaxation steps
             for relaxation_step in relaxation_steps:
                 # Define path to relaxation loading every relaxation step of a same defect state in the same data column
-                path_to_relaxation = f'{path_to_material}/{relaxation_step}/{defect_state}'
+                path_to_deformation = f'{path_to_material}/{relaxation_step}/{defect_state}'
                 
-                # Check if it is a valid relaxation (with a vasprun.xml file)
-                if not is_relaxation_folder_valid(path_to_relaxation):
+                # Avoiding non-directories (such as .DS_Store)
+                if not path.isdir(path_to_deformation):
                     continue
                 
+                # Define name for the defect state folder
                 temp_relaxation = f'{material}_{defect_state}'
                 
-                # Remove invalid characters from the vasprun.xml file
-                clean_vasprun(path_to_relaxation)  # Uncomment is it happens to you as well!!
+                # Check if it is a valid relaxation (with a vasprun.xml file)
+                # If not, it might be that there are different deformation folders of the defect state
+                if is_relaxation_folder_valid(path_to_deformation):
+                    path_to_relaxations = [path_to_deformation]
+                else:
+                    # Try to extact deformation folders
+                    deformation_folders = listdir(path_to_deformation)
+                    
+                    # Run over deformations
+                    path_to_relaxations = []
+                    for deformation_folder in deformation_folders:
+                        path_to_relaxation = f'{path_to_deformation}/{deformation_folder}'
+                        if is_relaxation_folder_valid(path_to_relaxation):
+                            path_to_relaxations.append(path_to_relaxation)
                 
-                # Load data from relaxation
-                try:
-                    # Try to load those unfinished relaxations as well
-                    vasprun = Vasprun(f'{path_to_relaxation}/vasprun.xml', exception_on_bad_xml=False)
-                except:
-                    print('Error: vasprun not correctly loaded.')
-                    continue
-                
-                # Run over ionic steps
-                for ionic_step_idx in range(len(vasprun.ionic_steps)):
-                    temp_ionic_step = f'{temp_relaxation}_{ionic_step_idx}'
-                    # Extract data from each ionic step
-                    temp_structure = vasprun.ionic_steps[ionic_step_idx]['structure']
-                    temp_energy    = vasprun.ionic_steps[ionic_step_idx]['e_fr_energy']
-                    temp_forces    = vasprun.ionic_steps[ionic_step_idx]['forces']
-                    temp_stress    = vasprun.ionic_steps[ionic_step_idx]['stress']
+                # Gather relaxations from different deformations as different ionic steps
+                for path_to_relaxation in path_to_relaxations:
+                    # Remove invalid characters from the vasprun.xml file
+                    clean_vasprun(path_to_relaxation)  # Uncomment is it happens to you as well!!
                     
-                    # Stresses obtained from VASP calculations (default unit is kBar) should be multiplied by -0.1
-                    # to work directly with the model
-                    temp_stress = np.array(temp_stress)
-                    temp_stress *= -0.1
-                    temp_stress = temp_stress.tolist()
+                    # Load data from relaxation
+                    try:
+                        # Try to load those unfinished relaxations as well
+                        vasprun = Vasprun(f'{path_to_relaxation}/vasprun.xml', exception_on_bad_xml=False)
+                    except:
+                        print('Error: vasprun not correctly loaded.')
+                        continue
                     
-                    # Generate a dictionary object with the new data
-                    new_data = {(material, temp_relaxation, temp_ionic_step): [temp_structure, temp_energy, temp_forces, temp_stress]}
-                    
-                    # Update in the main data object
-                    data.update(new_data)
+                    # Run over ionic steps
+                    for ionic_step_idx in range(len(vasprun.ionic_steps)):
+                        temp_ionic_step = f'{temp_relaxation}_{ionic_step_idx}'
+                        # Extract data from each ionic step
+                        temp_structure = vasprun.ionic_steps[ionic_step_idx]['structure']
+                        temp_energy    = vasprun.ionic_steps[ionic_step_idx]['e_fr_energy']
+                        temp_forces    = vasprun.ionic_steps[ionic_step_idx]['forces']
+                        temp_stress    = vasprun.ionic_steps[ionic_step_idx]['stress']
+                        
+                        # Stresses obtained from VASP calculations (default unit is kBar) should be multiplied by -0.1
+                        # to work directly with the model
+                        temp_stress = np.array(temp_stress)
+                        temp_stress *= -0.1
+                        temp_stress = temp_stress.tolist()
+                        
+                        # Generate a dictionary object with the new data
+                        new_data = {(material, temp_relaxation, temp_ionic_step): [temp_structure, temp_energy, temp_forces, temp_stress]}
+                        
+                        # Update in the main data object
+                        data.update(new_data)
 
     # Convert to Pandas DataFrame
     m3gnet_dataset = pd.DataFrame(data, index=columns)
