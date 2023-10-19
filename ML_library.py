@@ -99,7 +99,7 @@ def extract_vaspruns_dataset(path_to_dataset):
     data = {}
     
     # Initialize dataset with MP format
-    columns = ['structure', 'energy', 'force', 'stress']
+    columns = ['structure', 'energy', 'force', 'stress', 'nelect']
     
     # Iterate over materials and relaxations in the dataset
     for material in listdir(path_to_dataset):
@@ -172,6 +172,12 @@ def extract_vaspruns_dataset(path_to_dataset):
                         print('Error: vasprun not correctly loaded.')
                         continue
                     
+                    # Extract number of electrons (used as global variable later on)
+                    # Get information about the ionic charge (NELECT)
+                    n_electrons = vasprun.parameters.get('NELECT')
+                    if n_electrons is None:
+                        print(f'Error: number of electrons (NELECT flag) not found.')
+                    
                     # Run over ionic steps
                     for ionic_step_idx in range(len(vasprun.ionic_steps)):
                         temp_ionic_step = f'{temp_relaxation}_{ionic_step_idx}'
@@ -188,7 +194,7 @@ def extract_vaspruns_dataset(path_to_dataset):
                         temp_stress = temp_stress.tolist()
                         
                         # Generate a dictionary object with the new data
-                        new_data = {(material, temp_relaxation, temp_ionic_step): [temp_structure, temp_energy, temp_forces, temp_stress]}
+                        new_data = {(material, temp_relaxation, temp_ionic_step): [temp_structure, temp_energy, temp_forces, temp_stress, n_electrons]}
                         
                         # Update in the main data object
                         data.update(new_data)
