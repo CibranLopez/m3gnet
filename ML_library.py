@@ -8,6 +8,12 @@ from pymatgen.io.vasp.outputs import Vasprun, Outcar
 def is_relaxation_folder_valid(path_to_relaxation):
     """Determines whether path_to_relaxation contains a vasprun.xml file or not.
     It returns True (valid) if the file does exist.
+    
+    Args:
+        path_to_relaxation (str): path to the folder containing VASP file from an ionic relaxation.
+    
+    Returns:
+        (bool): true if the relaxation is valid, else false.
     """
     
     if path.exists(f'{path_to_relaxation}/vasprun.xml'):
@@ -20,6 +26,9 @@ def clean_vasprun(path_to_relaxation):
     
     Args:
         path_to_relaxation (str): path to the folder which contains the vasprun.xml file.
+    
+    Returns:
+        None
     """
     
     # Load lines
@@ -43,7 +52,7 @@ def split_data(data, test_size=0.2, validation_size=0.2, random_state=None):
     """
     Split a Pandas DataFrame into training, validation, and test sets.
 
-    Parameters:
+    Args:
         data (DataFrame): The input dataset to be split.
         test_size (float): The proportion of data to include in the test set (default: 0.2).
         validation_size (float): The proportion of data to include in the validation set (default: 0.2).

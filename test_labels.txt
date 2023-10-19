@@ -1,6 +1,0 @@
-BiSI_vac_1_Bi_0
-BiSBr_vac_1_Bi_2
-BiSBr_vac_3_Br_0
-BiSI_vac_1_Bi_3
-BiSI_as_2_S_on_I_0
-BiSI_as_2_I_on_S_0
