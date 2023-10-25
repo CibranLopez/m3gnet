@@ -202,3 +202,39 @@ def extract_vaspruns_dataset(path_to_dataset):
     # Convert to Pandas DataFrame
     m3gnet_dataset = pd.DataFrame(data, index=columns)
     return m3gnet_dataset
+
+
+def compute_offset(computed_energies, predicted_energies):
+    """Computes how accurate the predictions are globally (the offset between predicted and computed energies), defined as:
+    
+    d_1 = || E^{DFT} - E^{ML-IAP} ||
+    
+    Args:
+        computed_energies  (1D array): DFT computed energies at different ionic steps (typically in eV/supercell).
+        predicted_energies (1D array): ML-IAP computed energies at different ionic steps (typically in eV/supercell).
+    
+    Returns:
+        offset (float): euclidean distance between both curves (typically in eV/supercell).
+    """
+    
+    # Euclidean definition
+    offset = np.mean(computed_energies - predicted_energies)
+    return offset
+
+def compute_accuracy(computed_energies, predicted_energies, offset):
+    """Computes how accurate the predictions are in terms of curve reproduction (the difference between predicted and computed energies minus the offset), defined as:
+    
+    d_2 = || E^{DFT} - E^{ML-IAP} - d_1 ||
+    
+    Args:
+        computed_energies  (1D array): DFT computed energies at different ionic steps (typically in eV/supercell).
+        predicted_energies (1D array): ML-IAP computed energies at different ionic steps (typically in eV/supercell).
+        offset (float): euclidean distance between both curves (typically in eV/supercell).
+    
+    Returns:
+        accuracy (float): euclidean distance between both curves extracting the offset (typically in eV/supercell).
+    """
+    
+    # Euclidean definition
+    accuracy = np.mean(computed_energies - predicted_energies - offset)
+    return accuracy
