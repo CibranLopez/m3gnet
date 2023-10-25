@@ -74,7 +74,7 @@ def split_data(data, test_size=0.2, validation_size=0.2, random_state=None):
 
 
 def extract_vaspruns_dataset(path_to_dataset):
-    """Generates a Pandas DataFrame with the data from each simulation in the path. It gathers different relaxation steps under the same charge state, and different deformations of the charge state under the same defect state (just as different ionic steps). It assumes the following disposition:
+    """Generates a Pandas DataFrame with the data from each simulation in the path (identifier, strucutre, energy, forces, stresses, charge). It gathers different relaxation steps under the same charge state, and different deformations of the charge state under the same defect state (just as different ionic steps). It assumes the following disposition:
     
     Theory level
         Material

@@ -1,6 +1,10 @@
-BiSI_supercell
-BiSBr_vac_2_S_1
-BiSI_vac_2_S_1
+BiSI_as_2_Bi_on_I_1
+BiSI_as_2_Bi_on_I_2
+BiSI_as_2_I_on_S_1
+BiSI_as_1_S_on_Bi_1
 BiSI_as_1_S_on_Bi_0
-BiSBr_vac_1_Bi_0
-BiSI_vac_1_Bi_-3
+BiSI_as_1_Bi_on_S_3
+BiSI_as_2_S_on_I_4
+BiSI_as_1_I_on_Bi_1
+BiSI_as_2_Bi_on_I_0
+BiSI_as_2_I_on_S_0

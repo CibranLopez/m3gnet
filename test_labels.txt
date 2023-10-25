@@ -1,0 +1,10 @@
+BiSI_as_2_I_on_S_2
+BiSI_as_1_I_on_Bi_3
+BiSI_as_2_S_on_I_2
+BiSI_as_1_Bi_on_S_-2
+BiSI_as_1_I_on_Bi_2
+BiSI_as_1_S_on_Bi_4
+BiSI_as_2_I_on_S_3
+BiSI_as_1_S_on_Bi_2
+BiSI_as_2_S_on_I_5
+BiSI_as_1_Bi_on_S_5
