@@ -1,9 +1,23 @@
 import numpy  as np
 import pandas as pd
+import ase
+import matgl
+import warnings
 
-from os                       import path, listdir
-from sklearn.model_selection  import train_test_split
-from pymatgen.io.vasp.outputs import Vasprun, Outcar
+from os                          import path, listdir
+from sklearn.model_selection     import train_test_split
+from pymatgen.io.vasp.outputs    import Vasprun, Outcar
+from pymatgen.io.vasp.inputs     import Poscar
+from ase.io                      import read, write
+from ase.io.vasp                 import write_vasp_xdatcar
+from ase.md.velocitydistribution import MaxwellBoltzmannDistribution
+from pymatgen.core               import Lattice, Structure
+from pymatgen.io.ase             import AseAtomsAdaptor
+from matgl.ext.ase               import M3GNetCalculator, MolecularDynamics, Relaxer
+from pymatgen.io.ase             import AseAtomsAdaptor
+
+# To suppress warnings for clearer output
+warnings.simplefilter('ignore')
 
 def is_relaxation_folder_valid(path_to_relaxation):
     """Determines whether path_to_relaxation contains a vasprun.xml file or not.
@@ -221,6 +235,7 @@ def compute_offset(computed_energies, predicted_energies):
     offset = np.mean(computed_energies - predicted_energies)
     return offset
 
+
 def compute_accuracy(computed_energies, predicted_energies, offset):
     """Computes how accurate the predictions are in terms of curve reproduction (the difference between predicted and computed energies minus the offset), defined as:
     
@@ -238,3 +253,49 @@ def compute_accuracy(computed_energies, predicted_energies, offset):
     # Euclidean definition
     accuracy = np.mean(computed_energies - predicted_energies - offset)
     return accuracy
+
+
+def structural_relaxation(path_to_POSCAR, model_load_path, verbose=True):
+
+
+    # Load the structure to be relaxed
+    atoms_ini = Structure.from_file(f'{path_to_POSCAR}/POSCAR')
+
+    # Load the default pre-trained model
+    pot = matgl.load_model(model_load_path)
+    relaxer = Relaxer(potential=pot)
+
+    # Relax the structure
+    relax_atoms_ini = relaxer.relax(atoms_ini, verbose=verbose)
+    atoms = relax_atoms_ini['final_structure']
+
+    # Save the relaxed structure as a POSCAR file
+    poscar_relaxed = Poscar(atoms)
+    poscar_relaxed.write_file(f'{path_to_POSCAR}/CONTCAR')
+    return poscar_relaxed
+
+
+def single_shot_energy_calculations(path_to_structure, model_load_path):
+    """
+    """
+    
+    # Load the relaxed structure
+    atoms = Structure.from_file(f'{path_to_structure}')
+    
+    # Load the default pre-trained model
+    pot = matgl.load_model(model_load_path)
+    relaxer = Relaxer(potential=pot)
+
+    # Define the M3GNet calculator
+    calc = M3GNetCalculator(pot)
+
+    # Load atoms adapter and adapt structure
+    ase_adaptor = AseAtomsAdaptor()
+    adapted_atoms = ase_adaptor.get_atoms(atoms)
+
+    # Calculate potential energy
+    adapted_atoms.set_calculator(calc)
+    
+    # Extract the energy
+    ssc_energy = float(adapted_atoms.get_potential_energy())
+    return ssc_energy
