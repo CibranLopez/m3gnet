@@ -256,6 +256,17 @@ def compute_accuracy(computed_energies, predicted_energies, offset):
 
 
 def structural_relaxation(path_to_POSCAR, model_load_path, verbose=True):
+    """
+    Perform structural relaxation on a given structure.
+
+    Args:
+        path_to_POSCAR  (str):  Path to the input structure (POSCAR).
+        model_load_path (str):  Path to the pre-trained model for relaxation.
+        verbose         (bool): Verbosity of the relaxation process.
+
+    Returns:
+        poscar_relaxed (pymatgen structure): Relaxed structure saved as a POSCAR object.
+    """
 
 
     # Load the structure to be relaxed
@@ -277,6 +288,14 @@ def structural_relaxation(path_to_POSCAR, model_load_path, verbose=True):
 
 def single_shot_energy_calculations(path_to_structure, model_load_path):
     """
+    Calculate the potential energy of a relaxed structure using a pre-trained model.
+
+    Args:
+        path_to_structure (str): Path to the relaxed structure (CONTCAR).
+        model_load_path   (str): Path to the pre-trained model for energy calculation.
+
+    Returns:
+        ssc_energy (float): Potential energy of the structure.
     """
     
     # Load the relaxed structure
