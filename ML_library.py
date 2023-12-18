@@ -146,6 +146,15 @@ def extract_vaspruns_dataset(path_to_dataset):
         for defect_state in unique_defect_states:
             print(f'\t{defect_state}')
             
+            # Extract defect charge (used as global variable later on)
+            charge_state = 0
+            if defect_state != 'supercell':
+                try:
+                    charge_state = float(defect_state.split('_')[-1])
+                except:
+                    print(f'Error: defect charge not correctly estimated.')
+                    continue
+            
             # Run over all relaxation steps
             for relaxation_step in relaxation_steps:
                 # Define path to relaxation loading every relaxation step of a same defect state in the same data column
@@ -186,12 +195,6 @@ def extract_vaspruns_dataset(path_to_dataset):
                         print('Error: vasprun not correctly loaded.')
                         continue
                     
-                    # Extract number of electrons (used as global variable later on)
-                    # Get information about the ionic charge (NELECT)
-                    n_electrons = vasprun.parameters.get('NELECT')
-                    if n_electrons is None:
-                        print(f'Error: number of electrons (NELECT flag) not found.')
-                    
                     # Run over ionic steps
                     for ionic_step_idx in range(len(vasprun.ionic_steps)):
                         temp_ionic_step = f'{temp_relaxation}_{ionic_step_idx}'
@@ -208,7 +211,7 @@ def extract_vaspruns_dataset(path_to_dataset):
                         temp_stress = temp_stress.tolist()
                         
                         # Generate a dictionary object with the new data
-                        new_data = {(material, temp_relaxation, temp_ionic_step): [temp_structure, temp_energy, temp_forces, temp_stress, n_electrons]}
+                        new_data = {(material, temp_relaxation, temp_ionic_step): [temp_structure, temp_energy, temp_forces, temp_stress, charge_state]}
                         
                         # Update in the main data object
                         data.update(new_data)
