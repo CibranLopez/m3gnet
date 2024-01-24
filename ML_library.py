@@ -288,7 +288,12 @@ def structural_relaxation(path_to_POSCAR, model_load_path, verbose=True, relax_c
     atoms_ini = Structure.from_file(f'{path_to_POSCAR}/POSCAR')
 
     # Load the default pre-trained model
-    pot = matgl.load_model(model_load_path)
+    try:
+        pot = matgl.load_model(model_load_path)
+    except ValueError:
+        pot = matgl.load_model('M3GNet-MP-2021.2.8-PES')
+        pot.model.load(model_load_path)
+    
     relaxer = Relaxer(potential=pot, relax_cell=relax_cell)
 
     # Relax the structure
