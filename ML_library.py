@@ -87,7 +87,7 @@ def split_data(data, test_size=0.2, validation_size=0.2, random_state=None):
     return train_data, validation_data, test_data
 
 
-def extract_vaspruns_dataset(path_to_dataset):
+def extract_vaspruns_dataset(path_to_dataset, charged=True, energy_threshold=None):
     """Generates a Pandas DataFrame with the data from each simulation in the path (identifier, strucutre, energy, forces, stresses, charge). It gathers different relaxation steps under the same charge state, and different deformations of the charge state under the same defect state (just as different ionic steps). It assumes the following disposition:
     
     Theory level
@@ -103,7 +103,9 @@ def extract_vaspruns_dataset(path_to_dataset):
             Ionic step
     
     Args:
-        path_to_dataset (str): Path to tree database containing different level of theory calculations.
+        path_to_dataset  (str):         Path to tree database containing different level of theory calculations.
+        charged          (bool):        Whether to include charged relaxations or not (just neutral ones).
+        energy_threshold (float, None): If set, maximum energy of some ionic step to be included.
     
     Returns:
         m3gnet_dataset (Pandas DataFrame): DataFrame with information of simulations in multicolumn format (material, defect state, ionic step).
@@ -155,6 +157,10 @@ def extract_vaspruns_dataset(path_to_dataset):
                     print(f'Error: defect charge not correctly estimated.')
                     continue
             
+            # If charged is set to False, charged defects are avoided
+            if (charge_state != 0) and not charged:
+                continue
+            
             # Run over all relaxation steps
             for relaxation_step in relaxation_steps:
                 # Define path to relaxation loading every relaxation step of a same defect state in the same data column
@@ -203,6 +209,11 @@ def extract_vaspruns_dataset(path_to_dataset):
                         temp_energy    = vasprun.ionic_steps[ionic_step_idx]['e_fr_energy']
                         temp_forces    = vasprun.ionic_steps[ionic_step_idx]['forces']
                         temp_stress    = vasprun.ionic_steps[ionic_step_idx]['stress']
+                        
+                        # If the energy of the step is too large (exceeds some threshold), the relaxation is discarded
+                        if energy_threshold is not None:
+                            if (temp_energy > energy_threshold):
+                                continue
                         
                         # Stresses obtained from VASP calculations (default unit is kBar) should be multiplied by -0.1
                         # to work directly with the model
@@ -258,7 +269,7 @@ def compute_accuracy(computed_energies, predicted_energies, offset):
     return accuracy
 
 
-def structural_relaxation(path_to_POSCAR, model_load_path, verbose=True):
+def structural_relaxation(path_to_POSCAR, model_load_path, verbose=True, relax_cell=True):
     """
     Perform structural relaxation on a given structure.
 
@@ -266,6 +277,7 @@ def structural_relaxation(path_to_POSCAR, model_load_path, verbose=True):
         path_to_POSCAR  (str):  Path to the input structure (POSCAR).
         model_load_path (str):  Path to the pre-trained model for relaxation.
         verbose         (bool): Verbosity of the relaxation process.
+        relax_cell      (bool): Whether to relax the lattice cell.
 
     Returns:
         poscar_relaxed (pymatgen structure): Relaxed structure saved as a POSCAR object.
@@ -277,7 +289,7 @@ def structural_relaxation(path_to_POSCAR, model_load_path, verbose=True):
 
     # Load the default pre-trained model
     pot = matgl.load_model(model_load_path)
-    relaxer = Relaxer(potential=pot)
+    relaxer = Relaxer(potential=pot, relax_cell=relax_cell)
 
     # Relax the structure
     relax_atoms_ini = relaxer.relax(atoms_ini, verbose=verbose)
