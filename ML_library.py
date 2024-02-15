@@ -3,8 +3,8 @@ import pandas as pd
 import ase
 import matgl
 import warnings
+import os
 
-from os                          import path, listdir
 from sklearn.model_selection     import train_test_split
 from pymatgen.io.vasp.outputs    import Vasprun, Outcar
 from pymatgen.io.vasp.inputs     import Poscar
@@ -30,7 +30,7 @@ def is_relaxation_folder_valid(path_to_relaxation):
         (bool): true if the relaxation is valid, else false.
     """
     
-    if path.exists(f'{path_to_relaxation}/vasprun.xml'):
+    if os.path.exists(f'{path_to_relaxation}/vasprun.xml'):
         return True
     return False
 
@@ -118,27 +118,27 @@ def extract_vaspruns_dataset(path_to_dataset, charged=True, energy_threshold=Non
     columns = ['structure', 'energy', 'force', 'stress', 'nelect']
     
     # Iterate over materials and relaxations in the dataset
-    for material in listdir(path_to_dataset):
+    for material in os.listdir(path_to_dataset):
         # Define path to material
         path_to_material = f'{path_to_dataset}/{material}'
 
         # Check if it is a folder
-        if not path.isdir(path_to_material):
+        if not os.path.isdir(path_to_material):
             continue
 
         print()
         print(material)
         
         # Get relaxations steps (rel1, rel2...)
-        relaxation_steps = listdir(path_to_material)
+        relaxation_steps = os.listdir(path_to_material)
         
         # Determine all defect states across every folder
         defect_states = []
         for relaxation_step in relaxation_steps:
             path_to_relaxation_step = f'{path_to_material}/{relaxation_step}'
-            if path.isdir(path_to_relaxation_step):
-                for defect_state in listdir(path_to_relaxation_step):
-                    if path.isdir(f'{path_to_material}/{relaxation_step}/{defect_state}'):
+            if os.path.isdir(path_to_relaxation_step):
+                for defect_state in os.listdir(path_to_relaxation_step):
+                    if os.path.isdir(f'{path_to_material}/{relaxation_step}/{defect_state}'):
                         defect_states.append(defect_state)
         
         # Determine unique defect states across every folder
@@ -167,7 +167,7 @@ def extract_vaspruns_dataset(path_to_dataset, charged=True, energy_threshold=Non
                 path_to_deformation = f'{path_to_material}/{relaxation_step}/{defect_state}'
                 
                 # Avoiding non-directories (such as .DS_Store)
-                if not path.isdir(path_to_deformation):
+                if not os.path.isdir(path_to_deformation):
                     continue
                 
                 # Define name for the defect state folder
@@ -179,7 +179,7 @@ def extract_vaspruns_dataset(path_to_dataset, charged=True, energy_threshold=Non
                     path_to_relaxations = [path_to_deformation]
                 else:
                     # Try to extact deformation folders
-                    deformation_folders = listdir(path_to_deformation)
+                    deformation_folders = os.listdir(path_to_deformation)
                     
                     # Run over deformations
                     path_to_relaxations = []
@@ -202,30 +202,151 @@ def extract_vaspruns_dataset(path_to_dataset, charged=True, energy_threshold=Non
                         continue
                     
                     # Run over ionic steps
-                    for ionic_step_idx in range(len(vasprun.ionic_steps)):
+                    for ionic_step_idx, ionic_step in enumerate(vasprun.ionic_steps):
                         temp_ionic_step = f'{temp_relaxation}_{ionic_step_idx}'
+
                         # Extract data from each ionic step
-                        temp_structure = vasprun.ionic_steps[ionic_step_idx]['structure']
-                        temp_energy    = vasprun.ionic_steps[ionic_step_idx]['e_fr_energy']
-                        temp_forces    = vasprun.ionic_steps[ionic_step_idx]['forces']
-                        temp_stress    = vasprun.ionic_steps[ionic_step_idx]['stress']
-                        
-                        # If the energy of the step is too large (exceeds some threshold), the relaxation is discarded
-                        if energy_threshold is not None:
-                            if (temp_energy > energy_threshold):
-                                continue
-                        
+                        temp_structure = ionic_step['structure']
+                        temp_energy    = ionic_step['e_fr_energy']
+                        temp_forces    = ionic_step['forces']
+                        temp_stress    = ionic_step['stress']
+
                         # Stresses obtained from VASP calculations (default unit is kBar) should be multiplied by -0.1
                         # to work directly with the model
                         temp_stress = np.array(temp_stress)
                         temp_stress *= -0.1
                         temp_stress = temp_stress.tolist()
-                        
+
                         # Generate a dictionary object with the new data
                         new_data = {(material, temp_relaxation, temp_ionic_step): [temp_structure, temp_energy, temp_forces, temp_stress, charge_state]}
-                        
+
                         # Update in the main data object
                         data.update(new_data)
+
+    # Convert to Pandas DataFrame
+    m3gnet_dataset = pd.DataFrame(data, index=columns)
+    return m3gnet_dataset
+
+
+def extract_OUTCAR_dataset(path_to_dataset):
+    """Generates a Pandas DataFrame with the data from each simulation in the path (identifier, strucutre, energy, forces, stresses). It gathers different relaxation steps under the same charge state, and different deformations of the charge state under the same defect state (just as different ionic steps).
+    
+    Args:
+        path_to_dataset (str): Path to tree database containing different folder with a calculation.
+    
+    Returns:
+        m3gnet_dataset (Pandas DataFrame): DataFrame with information of simulations in multicolumn format (material, defect state, ionic step).
+    """
+
+    # Initialize the data dictionary
+    data = {}
+
+    # Initialize dataset with MP format
+    #columns = ['structure', 'energy', 'force', 'stress']
+    columns = ['structure', 'energy', 'force']
+
+    # Iterate over materials and relaxations in the dataset
+    for dir_name in os.listdir(path_to_dataset):
+        # Define path to material
+        path_to_dir = f'{path_to_dataset}/{dir_name}'
+
+        # Check if it is a folder
+        if not os.path.isdir(path_to_dir):
+            continue
+
+        # Check if OUTCAR is in folder
+        if not os.path.exists(f'{path_to_dir}/OUTCAR'):
+            continue
+
+        print()
+        print(dir_name)
+
+        with open(f'{path_to_dir}/OUTCAR', 'r') as file:
+            ionic_step_idx = 0
+            line = file.readline()
+            while True:
+                ### Read cell
+
+
+                while line != ' VOLUME and BASIS-vectors are now :':
+                    line = file.readline()
+                    if not line: break
+
+                # Skip intermediate lines
+                for _ in range(4):
+                    file.readline()
+
+                # Append cell
+                temp_cell = []
+                for _ in range(3):
+                    temp_cell.append(file.readline().split()[:3])
+
+                # Convert to arrays
+                temp_cell = np.array(temp_cell, dtype=float)
+
+
+                ### Read forces
+
+
+                while line != ' POSITION                                       TOTAL-FORCE (eV/Angst)':
+                    line = file.readline()
+                    if not line: break
+
+                # Skip intermediate lines
+                file.readline()
+
+                # Read data if available
+                temp_positions = []
+                temp_forces    = []
+                while True:
+                    # Read line and split
+                    line = file.readline()
+                    split_line = line.split()
+
+                    # Check if no more atoms
+                    if split_line[0][:2] == '--':
+                        break
+
+                    # Append positions and forces
+                    temp_positions.append(split_line[:3])
+                    temp_forces.append(split_line[3:])
+
+                    # Convert to arrays
+                    temp_positions = np.array(temp_positions, dtype=float)
+                    temp_forces    = np.array(temp_forces,    dtype=float)
+
+
+                ### Read energy
+
+                while line != '  FREE ENERGIE OF THE ION-ELECTRON SYSTEM (eV)':
+                    line = file.readline()
+                    if not line: break
+
+                # Skip intermediate lines
+                for _ in range(3):
+                    file.readline()
+
+                # Read energy
+                temp_energy = float(file.readline().split()[-1])
+
+
+                ### Generate data entry
+
+
+                # Create the Structure object
+                temp_structure = Structure(temp_cell, species, temp_positions)
+
+                # Generate a dictionary object with the new data
+                #new_data = {
+                #    (dir_name, str(ionic_step_idx)): [temp_structure, temp_energy, temp_forces, temp_stress]}
+                new_data = {
+                    (dir_name, str(ionic_step_idx)): [temp_structure, temp_energy, temp_forces]}
+
+                # Update in the main data object
+                data.update(new_data)
+
+                # Update ionic step
+                ionic_step_idx += 1
 
     # Convert to Pandas DataFrame
     m3gnet_dataset = pd.DataFrame(data, index=columns)
