@@ -115,7 +115,7 @@ def extract_vaspruns_dataset(path_to_dataset, charged=True, energy_threshold=Non
     data = {}
     
     # Initialize dataset with MP format
-    columns = ['structure', 'energy', 'force', 'stress', 'nelect']
+    columns = ['structure', 'energy', 'force', 'stress', 'charge_state']
     
     # Iterate over materials and relaxations in the dataset
     for material in os.listdir(path_to_dataset):
@@ -210,6 +210,23 @@ def extract_vaspruns_dataset(path_to_dataset, charged=True, energy_threshold=Non
                         temp_energy    = ionic_step['e_fr_energy']
                         temp_forces    = ionic_step['forces']
                         temp_stress    = ionic_step['stress']
+
+
+                        # Add charge to defect structure
+                        charge_diff = - charge_state / temp_structure.num_sites
+
+                        # Define oxidation states so that the net charge takes defect charge into account
+                        oxidations_dict = {
+                            'Bi': 3 + charge_diff,
+                            'Sb': 3 + charge_diff,
+                            'S':  -2 + charge_diff,
+                            'Se': -2 + charge_diff,
+                            'I':  -1 + charge_diff,
+                            'Br': -1 + charge_diff
+                        }
+
+                        # Update net charge of the structure
+                        temp_structure.add_oxidation_state_by_element(oxidations_dict)
 
                         # Stresses obtained from VASP calculations (default unit is kBar) should be multiplied by -0.1
                         # to work directly with the model
