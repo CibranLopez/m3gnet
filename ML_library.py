@@ -152,7 +152,19 @@ def extract_vaspruns_dataset(path_to_dataset, charged=True, energy_threshold=Non
             charge_state = 0
             if defect_state != 'supercell':
                 try:
-                    charge_state = float(defect_state.split('_')[-1])
+                    # Split the input string by underscores
+                    defect_state_str = defect_state.split('_')
+
+                    # Iterate over the parts in reverse order
+                    charge_state = None
+                    for temp in defect_state_str[::-1]:
+                        # Use regular expression to find numerical value
+                        if np.char.isnumeric(temp):
+                            charge_state = temp
+                            break
+
+                    if charge_state is None:
+                        print(f'Error: defect charge is None.')
                 except:
                     print(f'Error: defect charge not correctly estimated.')
                     continue
