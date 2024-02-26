@@ -286,100 +286,116 @@ def extract_OUTCAR_dataset(path_to_dataset):
         if not os.path.isdir(path_to_dir):
             continue
 
+        # Check if POSCAR is in folder
+        POSCAR_filename = f'{path_to_dir}/POSCAR'
+        if not os.path.exists(POSCAR_filename):
+            POSCAR_filename = f'{path_to_dir}/CONTCAR'
+            if not os.path.exists(POSCAR_filename):
+                continue
+
         # Check if OUTCAR is in folder
-        if not os.path.exists(f'{path_to_dir}/OUTCAR'):
+        OUTCAR_filename = f'{path_to_dir}/OUTCAR'
+        if not os.path.exists(OUTCAR_filename):
             continue
 
         print()
         print(dir_name)
 
-        with open(f'{path_to_dir}/OUTCAR', 'r') as file:
-            ionic_step_idx = 0
-            line = file.readline()
-            while True:
-                ### Read cell
-
-
-                while line != ' VOLUME and BASIS-vectors are now :':
+        try:
+            with open(POSCAR_filename, 'r') as file:
+                for _ in range(5):
                     line = file.readline()
-                    if not line: break
 
-                # Skip intermediate lines
-                for _ in range(4):
+                composition   = file.readline().split()
+                concentration = np.array(file.readline().split(), dtype=int)
+                n_atoms       = np.sum(concentration)
+                species       = [val for val, count in zip(composition, concentration) for _ in range(count)]
+
+            with open(OUTCAR_filename, 'r') as file:
+                ionic_step_idx = 0
+                line = file.readline()
+                while True:
+                    ### Read cell
+
+
+                    while line != ' VOLUME and BASIS-vectors are now :\n':
+                        line = file.readline()
+                        if not line: break
+
+                    # Skip intermediate lines
+                    for _ in range(4):
+                        file.readline()
+
+                    # Append cell
+                    temp_cell = []
+                    for _ in range(3):
+                        temp_cell.append(file.readline().split()[:3])
+
+                    # Convert to arrays
+                    temp_cell = np.array(temp_cell, dtype=float)
+
+
+                    ### Read forces
+
+
+                    while line != ' POSITION                                       TOTAL-FORCE (eV/Angst)\n':
+                        line = file.readline()
+                        if not line: break
+
+                    # Skip intermediate lines
                     file.readline()
 
-                # Append cell
-                temp_cell = []
-                for _ in range(3):
-                    temp_cell.append(file.readline().split()[:3])
+                    # Read data if available
+                    temp_positions = []
+                    temp_forces    = []
 
-                # Convert to arrays
-                temp_cell = np.array(temp_cell, dtype=float)
+                    for _ in range(n_atoms):
+                        # Read line and split
+                        line       = file.readline()
+                        split_line = line.split()
 
-
-                ### Read forces
-
-
-                while line != ' POSITION                                       TOTAL-FORCE (eV/Angst)':
-                    line = file.readline()
-                    if not line: break
-
-                # Skip intermediate lines
-                file.readline()
-
-                # Read data if available
-                temp_positions = []
-                temp_forces    = []
-                while True:
-                    # Read line and split
-                    line = file.readline()
-                    split_line = line.split()
-
-                    # Check if no more atoms
-                    if split_line[0][:2] == '--':
-                        break
-
-                    # Append positions and forces
-                    temp_positions.append(split_line[:3])
-                    temp_forces.append(split_line[3:])
+                        # Append positions and forces
+                        temp_positions.append(split_line[:3])
+                        temp_forces.append(split_line[3:])
 
                     # Convert to arrays
                     temp_positions = np.array(temp_positions, dtype=float)
                     temp_forces    = np.array(temp_forces,    dtype=float)
 
-
-                ### Read energy
-
-                while line != '  FREE ENERGIE OF THE ION-ELECTRON SYSTEM (eV)':
-                    line = file.readline()
-                    if not line: break
-
-                # Skip intermediate lines
-                for _ in range(3):
-                    file.readline()
-
-                # Read energy
-                temp_energy = float(file.readline().split()[-1])
+                    ### Read energy
 
 
-                ### Generate data entry
+                    while line != '  FREE ENERGIE OF THE ION-ELECTRON SYSTEM (eV)\n':
+                        line = file.readline()
+                        if not line: break
+
+                    # Skip intermediate lines
+                    for _ in range(3):
+                        file.readline()
+
+                    # Read energy
+                    temp_energy = float(file.readline().split()[-1])
 
 
-                # Create the Structure object
-                temp_structure = Structure(temp_cell, species, temp_positions)
+                    ### Generate data entry
 
-                # Generate a dictionary object with the new data
-                #new_data = {
-                #    (dir_name, str(ionic_step_idx)): [temp_structure, temp_energy, temp_forces, temp_stress]}
-                new_data = {
-                    (dir_name, str(ionic_step_idx)): [temp_structure, temp_energy, temp_forces]}
 
-                # Update in the main data object
-                data.update(new_data)
+                    # Create the Structure object
+                    temp_structure = Structure(temp_cell, species, temp_positions)
 
-                # Update ionic step
-                ionic_step_idx += 1
+                    # Generate a dictionary object with the new data
+                    #new_data = {
+                    #    (dir_name, str(ionic_step_idx)): [temp_structure, temp_energy, temp_forces, temp_stress]}
+                    new_data = {
+                        (dir_name, str(ionic_step_idx)): [temp_structure, temp_energy, temp_forces]}
 
+                    # Update in the main data object
+                    data.update(new_data)
+
+                    # Update ionic step
+                    ionic_step_idx += 1
+        except:
+            continue
     # Convert to Pandas DataFrame
     m3gnet_dataset = pd.DataFrame(data, index=columns)
     return m3gnet_dataset
