@@ -128,6 +128,9 @@ def extract_vaspruns_dataset(path_to_dataset, charged=True, energy_threshold=Non
 
         print()
         print(material)
+
+        if len(data) > 10:
+            break
         
         # Get relaxations steps (rel1, rel2...)
         relaxation_steps = os.listdir(path_to_material)
@@ -160,7 +163,7 @@ def extract_vaspruns_dataset(path_to_dataset, charged=True, energy_threshold=Non
                     for temp in defect_state_str[::-1]:
                         # Use regular expression to find numerical value
                         if np.char.isnumeric(temp):
-                            charge_state = temp
+                            charge_state = float(temp)
                             break
 
                     if charge_state is None:
