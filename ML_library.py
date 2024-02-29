@@ -128,9 +128,6 @@ def extract_vaspruns_dataset(path_to_dataset, charged=True, energy_threshold=Non
 
         print()
         print(material)
-
-        if len(data) > 10:
-            break
         
         # Get relaxations steps (rel1, rel2...)
         relaxation_steps = os.listdir(path_to_material)
