@@ -356,7 +356,7 @@ def extract_OUTCAR_dataset(path_to_dataset):
                         temp_forces.append(split_line[3:])
 
                     # Convert to arrays
-                    temp_positions = np.array(temp_positions, dtype=float)
+                    temp_positions = np.array(temp_positions, dtype=float).tolist()
                     temp_forces    = np.array(temp_forces,    dtype=float)
 
                     ### Read energy
