@@ -123,6 +123,8 @@ def extract_vaspruns_dataset(path_to_dataset, charged=True, energy_threshold=Non
 
         print()
         print(material)
+        if len(data) > 1000:
+            break
         
         # Get relaxations steps (rel1, rel2...)
         relaxation_steps = os.listdir(path_to_material)
@@ -142,6 +144,8 @@ def extract_vaspruns_dataset(path_to_dataset, charged=True, energy_threshold=Non
         # Run over all defect states
         for defect_state in unique_defect_states:
             print(f'\t{defect_state}')
+            if len(data) > 1000:
+                break
             
             # Extract defect charge (used as global variable later on)
             charge_state = 0
@@ -292,6 +296,8 @@ def extract_OUTCAR_dataset(path_to_dataset):
 
         print()
         print(dir_name)
+        if len(data) > 100:
+            break
 
         try:
             with open(POSCAR_filename, 'r') as file:
