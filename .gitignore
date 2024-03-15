@@ -10,5 +10,5 @@ dgl_line_graph-*.bin
 labels-*.json
 state_attr-*.pt
 lattice.pt
-*_labels.txt
+*labels.txt
 logs
