@@ -4,7 +4,6 @@
 __pycache__
 m3gnetenv
 Loaded*
-Data*
 models
 dgl_graph-*.bin
 dgl_line_graph-*.bin
