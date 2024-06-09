@@ -1,19 +1,14 @@
 import numpy  as np
 import pandas as pd
-import ase
 import matgl
 import warnings
 import os
 
 from sklearn.model_selection     import train_test_split
-from pymatgen.io.vasp.outputs    import Vasprun, Outcar
+from pymatgen.io.vasp.outputs    import Vasprun
 from pymatgen.io.vasp.inputs     import Poscar
-from ase.io                      import read, write
-from ase.io.vasp                 import write_vasp_xdatcar
-from ase.md.velocitydistribution import MaxwellBoltzmannDistribution
-from pymatgen.core               import Lattice, Structure
-from pymatgen.io.ase             import AseAtomsAdaptor
-from matgl.ext.ase               import M3GNetCalculator, MolecularDynamics, Relaxer
+from pymatgen.core               import Structure
+from matgl.ext.ase               import M3GNetCalculator, Relaxer
 from pymatgen.io.ase             import AseAtomsAdaptor
 
 # To suppress warnings for clearer output
@@ -174,8 +169,8 @@ def extract_vaspruns_dataset(path_to_dataset, charged=True, energy_threshold=Non
                     continue
             
             # If charged is set to False, charged defects are avoided
-            if (charge_state != 0) and not charged:
-                continue
+            #if (charge_state != 0) and not charged:
+            #    continue
             
             # Run over all relaxation steps
             for relaxation_step in relaxation_steps:
