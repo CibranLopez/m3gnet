@@ -1,1 +1,1 @@
-{"model_load_path": "M3GNet-MP-2021.2.8-PES", "model_save_path": "finetuned_model", "charged": false, "depth": 1, "batch_size": 128, "stress_weight": 0.7, "test_ratio": 0.2, "validation_ratio": 0.2, "max_epochs": 1000, "lr": 0.0001, "path_to_dataset": "/home/claudio/Desktop/defects/ssc"}
+{"model_load_path": "M3GNet-MP-2021.2.8-PES", "model_save_path": "finetuned_model", "charged": false, "depth": 1, "batch_size": 128, "stress_weight": 0.7, "test_ratio": 0.2, "validation_ratio": 0.2, "max_epochs": 5, "lr": 0.0001, "path_to_dataset": "../../../Desktop/database/HSE06+D3+SOC"}
