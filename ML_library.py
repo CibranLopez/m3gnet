@@ -135,10 +135,10 @@ def extract_vaspruns_dataset(path_to_dataset, charged=True, energy_threshold=Non
                 for defect_state in os.listdir(path_to_relaxation_step):
                     if os.path.isdir(f'{path_to_material}/{relaxation_step}/{defect_state}'):
                         defect_states.append(defect_state)
-        
+
         # Determine unique defect states across every folder
         unique_defect_states = np.unique(defect_states)
-        
+
         # Run over all defect states
         for defect_state in unique_defect_states:
             print(f'\t{defect_state}')
