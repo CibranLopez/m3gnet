@@ -164,9 +164,10 @@ def extract_vaspruns_dataset(path_to_dataset, charged=True, energy_threshold=Non
                     print(f'Error: defect charge not correctly estimated.')
                     continue
             
-            # If charged is set to False, charged defects are avoided
-            if (charge_state != 0) and not charged:
-                continue
+            # We only continue if we are in the correct charge state (if charged is None, we use all)
+            if (charge_state != charged) and charged is not None:
+                print(f'Go with {charge_state}')
+                break
             
             # Run over all relaxation steps
             for relaxation_step in relaxation_steps:
@@ -223,6 +224,7 @@ def extract_vaspruns_dataset(path_to_dataset, charged=True, energy_threshold=Non
                             temp_forces    = ionic_step['forces']
                             temp_stress    = ionic_step['stress']
 
+                            '''
                             # Add charge to defect structure
                             charge_diff = - charge_state / temp_structure.num_sites
 
@@ -238,6 +240,7 @@ def extract_vaspruns_dataset(path_to_dataset, charged=True, energy_threshold=Non
 
                             # Update net charge of the structure
                             temp_structure.add_oxidation_state_by_element(oxidations_dict)
+                            '''
 
                             # Stresses obtained from VASP calculations (default unit is kBar) should be multiplied by -0.1
                             # to work directly with the model
