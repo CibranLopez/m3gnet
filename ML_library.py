@@ -82,7 +82,7 @@ def split_data(data, test_size=0.2, validation_size=0.2, random_state=None):
     return train_data, validation_data, test_data
 
 
-def extract_vaspruns_dataset(path_to_dataset, charged=True, energy_threshold=None):
+def extract_vaspruns_dataset(path_to_dataset, charged=True, energy_threshold=None, ionic_steps_to_skip=0):
     """Generates a Pandas DataFrame with the data from each simulation in the path (identifier, strucutre, energy, forces, stresses, charge). It gathers different relaxation steps under the same charge state, and different deformations of the charge state under the same defect state (just as different ionic steps). It assumes the following disposition:
     
     Theory level
@@ -164,9 +164,10 @@ def extract_vaspruns_dataset(path_to_dataset, charged=True, energy_threshold=Non
                     print(f'Error: defect charge not correctly estimated.')
                     continue
             
-            # If charged is set to False, charged defects are avoided
-            if (charge_state != 0) and not charged:
-                continue
+            # We only continue if we are in the correct charge state (if charged is None, we use all)
+            if (charge_state != charged) and charged is not None:
+                print(f'Go with {charge_state}')
+                break
             
             # Run over all relaxation steps
             for relaxation_step in relaxation_steps:
@@ -207,45 +208,57 @@ def extract_vaspruns_dataset(path_to_dataset, charged=True, energy_threshold=Non
                     except:
                         print('Error: vasprun not correctly loaded.')
                         continue
-                    
+
                     # Run over ionic steps
+                    skip_ionic_step = 0
                     for ionic_step_idx, ionic_step in enumerate(vasprun.ionic_steps):
-                        temp_ionic_step = f'{temp_relaxation}_{ionic_step_idx}'
+                        if skip_ionic_step-1 == ionic_steps_to_skip:
+                            skip_ionic_step = 0
 
-                        # Extract data from each ionic step
-                        temp_structure = ionic_step['structure']
-                        temp_energy    = ionic_step['e_fr_energy']
-                        temp_forces    = ionic_step['forces']
-                        temp_stress    = ionic_step['stress']
+                        if not skip_ionic_step:
+                            temp_ionic_step = f'{temp_relaxation}_{ionic_step_idx}'
 
+                            # Extract data from each ionic step
+                            temp_structure = ionic_step['structure']
+                            temp_energy    = ionic_step['e_fr_energy']
+                            temp_forces    = ionic_step['forces']
+                            temp_stress    = ionic_step['stress']
 
-                        # Add charge to defect structure
-                        charge_diff = - charge_state / temp_structure.num_sites
+                            '''
+                            # Add charge to defect structure
+                            charge_diff = - charge_state / temp_structure.num_sites
 
-                        # Define oxidation states so that the net charge takes defect charge into account
-                        oxidations_dict = {
-                            'Bi': 3 + charge_diff,
-                            'Sb': 3 + charge_diff,
-                            'S':  -2 + charge_diff,
-                            'Se': -2 + charge_diff,
-                            'I':  -1 + charge_diff,
-                            'Br': -1 + charge_diff
-                        }
+                            # Define oxidation states so that the net charge takes defect charge into account
+                            oxidations_dict = {
+                                'Bi':  3 + charge_diff,
+                                'Sb':  3 + charge_diff,
+                                'S':  -2 + charge_diff,
+                                'Se': -2 + charge_diff,
+                                'I':  -1 + charge_diff,
+                                'Br': -1 + charge_diff
+                            }
 
-                        # Update net charge of the structure
-                        temp_structure.add_oxidation_state_by_element(oxidations_dict)
+                            # Update net charge of the structure
+                            temp_structure.add_oxidation_state_by_element(oxidations_dict)
+                            '''
 
-                        # Stresses obtained from VASP calculations (default unit is kBar) should be multiplied by -0.1
-                        # to work directly with the model
-                        temp_stress = np.array(temp_stress)
-                        temp_stress *= -0.1
-                        temp_stress = temp_stress.tolist()
+                            # Stresses obtained from VASP calculations (default unit is kBar) should be multiplied by -0.1
+                            # to work directly with the model
+                            temp_stress = np.array(temp_stress)
+                            temp_stress *= -0.1
+                            temp_stress = temp_stress.tolist()
 
-                        # Generate a dictionary object with the new data
-                        new_data = {(material, temp_relaxation, temp_ionic_step): [temp_structure, temp_energy, temp_forces, temp_stress, charge_state]}
+                            # Generate a dictionary object with the new data
+                            new_data = {(material, temp_relaxation, temp_ionic_step): [temp_structure, temp_energy, temp_forces, temp_stress, charge_state]}
 
-                        # Update in the main data object
-                        data.update(new_data)
+                            # Update in the main data object
+                            data.update(new_data)
+
+                            # Counter to zero
+                            skip_ionic_step = 0
+
+                        # New step added
+                        skip_ionic_step += 1
 
     # Convert to Pandas DataFrame
     m3gnet_dataset = pd.DataFrame(data, index=columns)
