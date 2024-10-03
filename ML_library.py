@@ -165,8 +165,8 @@ def extract_vaspruns_dataset(path_to_dataset, charged=True, energy_threshold=Non
                     continue
             
             # If charged is set to False, charged defects are avoided
-            #if (charge_state != 0) and not charged:
-            #    continue
+            if (charge_state != 0) and not charged:
+                continue
             
             # Run over all relaxation steps
             for relaxation_step in relaxation_steps:
@@ -185,7 +185,7 @@ def extract_vaspruns_dataset(path_to_dataset, charged=True, energy_threshold=Non
                 if is_relaxation_folder_valid(path_to_deformation):
                     path_to_relaxations = [path_to_deformation]
                 else:
-                    # Try to extact deformation folders
+                    # Try to extract deformation folders
                     deformation_folders = os.listdir(path_to_deformation)
                     
                     # Run over deformations
