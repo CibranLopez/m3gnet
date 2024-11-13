@@ -82,6 +82,135 @@ def split_data(data, test_size=0.2, validation_size=0.2, random_state=None):
     return train_data, validation_data, test_data
 
 
+def extract_vaspruns_GdCeO2(path_to_dataset, ionic_steps_to_skip=0):
+    """Generates a Pandas DataFrame with the data from each simulation in the path (identifier, strucutre, energy, forces, stresses, charge). It gathers different relaxation steps under the same charge state, and different deformations of the charge state under the same defect state (just as different ionic steps). It assumes the following disposition:
+
+    Stoichiometricity
+        Temperature
+            Configuration
+                run
+                    vasprun.xml (with several ionic steps)
+
+    And the dataframe will be disposed as:
+
+    Stoichiometricity
+        Temperature
+            Configuration
+
+    Args:
+        path_to_dataset     (str): Path to tree database containing different level of theory calculations.
+        ionic_steps_to_skip (int): Number of ionic steps to skip between each load.
+
+    Returns:
+        m3gnet_dataset (Pandas DataFrame): DataFrame with information of simulations in multicolumn format.
+    """
+
+    # Initialize the data dictionary
+    data = {}
+
+    # Initialize dataset with MP format
+    columns = ['structure', 'energy', 'force', 'stress']
+
+    # Iterate over materials and relaxations in the dataset
+    for stoichiometricity in os.listdir(path_to_dataset):
+        # Define path to material
+        path_to_stoichiometricity = f'{path_to_dataset}/{stoichiometricity}'
+
+        # Check if it is a folder
+        if not os.path.isdir(path_to_stoichiometricity):
+            continue
+
+        print()
+        print(stoichiometricity)
+
+        # Run over all stoichiometricities
+        for temperature in os.listdir(path_to_stoichiometricity):
+            # Define path to temperature
+            path_to_temperature = f'{path_to_stoichiometricity}/{temperature}'
+
+            # Check if it is a folder
+            if not os.path.isdir(path_to_temperature):
+                continue
+
+            print()
+            print(temperature)
+
+            # Run over all configurations
+            for configuration in os.listdir(path_to_temperature):
+                # Define path to configuration
+                path_to_configuration = f'{path_to_temperature}/{configuration}'
+
+                # Check if it is a folder
+                if not os.path.isdir(path_to_configuration):
+                    continue
+
+                print()
+                print(configuration)
+
+                structure_list = []
+                energy_list = []
+                forces_list = []
+                stress_list = []
+                # Run over all runs
+                for run in os.listdir(path_to_configuration):
+                    # Define path to run
+                    path_to_run = f'{path_to_configuration}/{run}'
+
+                    # Check if it is a folder
+                    if not os.path.isdir(path_to_configuration):
+                        continue
+
+                    print()
+                    print(configuration)
+
+                    # Load data from relaxation
+                    try:
+                        # Try to load those unfinished relaxations as well
+                        vasprun = Vasprun(f'{path_to_run}/vasprun.xml', exception_on_bad_xml=False)
+                    except:
+                        print('Error: vasprun not correctly loaded.')
+                        continue
+
+                    # Run over ionic steps
+                    skip_ionic_step = 0
+                    for ionic_step_idx, ionic_step in enumerate(vasprun.ionic_steps):
+                        if skip_ionic_step-1 == ionic_steps_to_skip:
+                            skip_ionic_step = 0
+
+                        if not skip_ionic_step:
+                            # Extract data from each ionic step
+                            temp_structure = ionic_step['structure']
+                            temp_energy    = ionic_step['e_fr_energy']
+                            temp_forces    = ionic_step['forces']
+                            temp_stress    = ionic_step['stress']
+
+                            # Stresses obtained from VASP calculations (default unit is kBar) should be multiplied by -0.1
+                            # to work directly with the model
+                            temp_stress = np.array(temp_stress)
+                            temp_stress *= -0.1
+                            temp_stress = temp_stress.tolist()
+
+                            # Append data
+                            structure_list.append(temp_structure)
+                            energy_list.append(temp_energy)
+                            forces_list.append(temp_forces)
+                            stress_list.append(temp_stress)
+
+                            # Counter to zero
+                            skip_ionic_step = 0
+
+                        # New step added
+                        skip_ionic_step += 1
+
+                # Update main data object
+                data.update({(stoichiometricity, temperature, configuration):
+                                [structure_list, energy_list, forces_list, stress_list]})
+
+    # Convert to Pandas DataFrame
+    m3gnet_dataset = pd.DataFrame(data, index=columns)
+    return m3gnet_dataset
+
+
 def extract_vaspruns_dataset(path_to_dataset, charged=True, energy_threshold=None, ionic_steps_to_skip=0):
     """Generates a Pandas DataFrame with the data from each simulation in the path (identifier, strucutre, energy, forces, stresses, charge). It gathers different relaxation steps under the same charge state, and different deformations of the charge state under the same defect state (just as different ionic steps). It assumes the following disposition:
     
