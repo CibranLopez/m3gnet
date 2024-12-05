@@ -5,5 +5,5 @@ numpy
 pandas
 torch
 lightning
-json
+simplejson
 matplotlib

@@ -2,7 +2,6 @@
 .ipynb_checkpoints
 .idea
 __pycache__
-m3gnetenv
 Loaded*
 models
 dgl_graph-*.bin
@@ -12,3 +11,4 @@ state_attr-*.pt
 lattice.pt
 *labels.txt
 logs
+venv
