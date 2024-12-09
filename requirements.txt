@@ -1,0 +1,9 @@
+matgl
+pymatgen
+scikit-learn
+numpy
+pandas
+torch
+lightning
+simplejson
+matplotlib
