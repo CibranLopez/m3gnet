@@ -155,13 +155,13 @@ def extract_vaspruns_GdCeO2(path_to_dataset, ionic_steps_to_skip=0):
                 for run in os.listdir(path_to_configuration):
                     # Define path to run
                     path_to_run = f'{path_to_configuration}/{run}'
-
+                    
                     # Check if it is a folder
-                    if not os.path.isdir(path_to_configuration):
+                    if not os.path.isdir(path_to_run):
                         continue
 
                     print()
-                    print(configuration)
+                    print(run)
 
                     # Load data from relaxation
                     try:
