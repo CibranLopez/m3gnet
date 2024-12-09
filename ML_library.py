@@ -155,13 +155,13 @@ def extract_vaspruns_GdCeO2(path_to_dataset, ionic_steps_to_skip=0):
                 for run in os.listdir(path_to_configuration):
                     # Define path to run
                     path_to_run = f'{path_to_configuration}/{run}'
-                    
+
                     # Check if it is a folder
-                    if not os.path.isdir(path_to_run):
+                    if not os.path.isdir(path_to_configuration):
                         continue
 
                     print()
-                    print(run)
+                    print(configuration)
 
                     # Load data from relaxation
                     try:
@@ -341,24 +341,6 @@ def extract_vaspruns_dataset(path_to_dataset, charged=True, energy_threshold=Non
                             temp_forces    = ionic_step['forces']
                             temp_stress    = ionic_step['stress']
 
-                            '''
-                            # Add charge to defect structure
-                            charge_diff = - charge_state / temp_structure.num_sites
-
-                            # Define oxidation states so that the net charge takes defect charge into account
-                            oxidations_dict = {
-                                'Bi':  3 + charge_diff,
-                                'Sb':  3 + charge_diff,
-                                'S':  -2 + charge_diff,
-                                'Se': -2 + charge_diff,
-                                'I':  -1 + charge_diff,
-                                'Br': -1 + charge_diff
-                            }
-
-                            # Update net charge of the structure
-                            temp_structure.add_oxidation_state_by_element(oxidations_dict)
-                            '''
-
                             # Stresses obtained from VASP calculations (default unit is kBar) should be multiplied by -0.1
                             # to work directly with the model
                             temp_stress = np.array(temp_stress)
@@ -380,6 +362,112 @@ def extract_vaspruns_dataset(path_to_dataset, charged=True, energy_threshold=Non
     # Convert to Pandas DataFrame
     m3gnet_dataset = pd.DataFrame(data, index=columns)
     return m3gnet_dataset
+
+
+def extract_vaspruns_GdCeO2(path_to_dataset, energy_threshold=None, ionic_steps_to_skip=0):
+    """Generates a Pandas DataFrame with the data from each simulation in the path (identifier, strucutre, energy, forces, stresses, charge). It gathers different relaxation steps under the same charge state, and different deformations of the charge state under the same defect state (just as different ionic steps). It assumes the following disposition:
+    
+    Concentration
+        Temperature
+            Configuration
+                vasprun.xml (with several ionic steps)
+    
+    And the dataframe will be disposed likewise.
+    
+    Args:
+        path_to_dataset     (str):         Path to tree database containing different level of theory calculations.
+        energy_threshold    (float, None): If set, maximum energy of some ionic step to be included.
+        ionic_steps_to_skip (int, 0):      If set, we skip those ionic steps each time we save one.
+    
+    Returns:
+        dataset (Pandas DataFrame): DataFrame with information of simulations in multicolumn format (material, defect state, ionic step).
+    """
+    
+    # Initialize the data dictionary
+    data = {}
+    
+    # Initialize dataset with MP format
+    columns = ['structure', 'energy', 'force', 'stress']
+    
+    # Iterate over concentrations of Gd-Ce
+    for concentration in os.listdir(path_to_dataset):
+        # Define path to material
+        path_to_concentration = f'{path_to_dataset}/{concentration}'
+
+        # Check if it is a folder
+        if not os.path.isdir(path_to_concentration):
+            continue
+
+        print()
+        print(concentration)
+        
+        # Run over temperatures
+        for temperature in os.listdir(path_to_concentration):
+            # Define path to material
+            path_to_temperature = f'{path_to_concentration}/{temperature}'
+    
+            # Check if it is a folder
+            if not os.path.isdir(path_to_temperature):
+                continue
+            
+            print(f'\t{temperature}')
+            
+            # Run over configurations
+            for configuration in os.listdir(path_to_temperature):
+                # Define path to relaxation loading every relaxation step of a same defect state in the same data column
+                path_to_configuration = f'{path_to_temperature}/{configuration}'
+                
+                # Avoiding non-directories (such as .DS_Store)
+                if not os.path.isdir(path_to_configuration):
+                    continue
+            
+                print(f'\t{configuration}')
+                
+                # Remove invalid characters from the vasprun.xml file
+                clean_vasprun(path_to_configuration)
+                
+                # Load data from relaxation
+                try:
+                    # Try to load those unfinished relaxations as well
+                    vasprun = Vasprun(f'{path_to_configuration}/vasprun.xml', exception_on_bad_xml=False)
+                except:
+                    print('Error: vasprun not correctly loaded.')
+                    continue
+
+                # Run over ionic steps
+                skip_ionic_step = 0
+                for ionic_step_idx, ionic_step in enumerate(vasprun.ionic_steps):
+                    if skip_ionic_step-1 == ionic_steps_to_skip:
+                        skip_ionic_step = 0
+
+                    if not skip_ionic_step:
+                        # Extract data from each ionic step
+                        temp_structure = ionic_step['structure']
+                        temp_energy    = ionic_step['e_fr_energy']
+                        temp_forces    = ionic_step['forces']
+                        temp_stress    = ionic_step['stress']
+
+                        # Stresses obtained from VASP calculations (default unit is kBar) should be multiplied by -0.1
+                        # to work directly with the model
+                        temp_stress = np.array(temp_stress)
+                        temp_stress *= -0.1
+                        temp_stress = temp_stress.tolist()
+
+                        # Generate a dictionary object with the new data
+                        new_data = {(concentration, temperature, configuration, ionic_step_idx):
+                                    [temp_structure, temp_energy, temp_forces, temp_stress]}
+
+                        # Update in the main data object
+                        data.update(new_data)
+
+                        # Counter to zero
+                        skip_ionic_step = 0
+
+                    # New step added
+                    skip_ionic_step += 1
+
+    # Convert to Pandas DataFrame and return
+    return pd.DataFrame(data, index=columns)
 
 
 def extract_OUTCAR_dataset(path_to_dataset):
